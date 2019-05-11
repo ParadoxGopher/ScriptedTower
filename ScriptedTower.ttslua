@@ -1,0 +1,385 @@
+results = {}
+settings = {
+    minMod = -2,
+    maxMod = 8,
+    edit = false,
+}
+
+mods = {
+    4,
+    2,
+    1,
+}
+
+dispId = 0
+advId = 1
+disId = 2
+nId = 3
+showId = 4
+editId = 5
+
+function onLoad()
+    self.createButton({
+        label           = "disp",
+        click_function  = "printResult",
+        function_owner  = self,
+        position        = {0,1.0,-0.6},
+        rotation        = {90,180,0},
+        height          = 500,
+        width           = 500,
+        font_size       = 500,
+        font_color      = {1, 1, 1},
+        color           = {0, 0, 0},
+        scale           = {1, 1, 1},
+		alignment       = 2,
+    })
+
+    self.createButton({
+        label           = "adv",
+        click_function  = "setAdvantage",
+        function_owner  = self,
+        position        = {0.8,0,-0.6},
+        rotation        = {90,180,0},
+        height          = 200,
+        width           = 250,
+        font_size       = 150,
+        font_color      = {0, 0, 0},
+        color           = {0, 1, 0},
+        scale           = {1, 1, 1},
+		alignment       = 2,
+        tooltip         = "advantage",
+    })
+
+    self.createButton({
+        label           = "dis",
+        click_function  = "setDisadvantage",
+        function_owner  = self,
+        position        = {-0.8,0,-0.6},
+        rotation        = {90,180,0},
+        height          = 200,
+        width           = 250,
+        font_size       = 150,
+        font_color      = {0, 0, 0},
+        color           = {1, 0, 0},
+        scale           = {1, 1, 1},
+        alignment       = 2,
+        tooltip         = "disadvantage",
+    })
+
+    self.createButton({
+        label           = "n",
+        click_function  = "setNormal",
+        function_owner  = self,
+        position        = {0,0,-0.6},
+        rotation        = {90,180,0},
+        height          = 300,
+        width           = 350,
+        font_size       = 150,
+        font_color      = {0, 0, 0},
+        color           = {1, 1, 1},
+        scale           = {1, 1, 1},
+        alignment       = 2,
+        tooltip         = "normal"
+    })
+
+    self.createButton({
+        label           = "0",
+        click_function  = "none",
+        function_owner  = Global,
+        position        = {0,1.0,1.2},
+        rotation        = {270,180,180},
+        height          = 0,
+        width           = 0,
+        font_size       = 300,
+        font_color      = {1, 1, 1},
+        color           = {0, 0, 0},
+        scale           = {1, 1, 1},
+		alignment       = 2,
+    })
+
+    self.createButton({
+        label           = ".",
+        click_function  = "toggleEdit",
+        function_owner  = self,
+        position        = {1.14,-2.1,-2.4},
+        rotation        = {90, 0, 0},
+        height          = 30,
+        width           = 30,
+        font_size       = 20,
+        font_color      = {1,1,1},
+        color           = {0.3,0.3,0.3}
+    })
+
+    createModButtons()
+end
+
+function createModButtons()
+    local spacing = 0.18
+    local num = 0
+    for i = settings.minMod, settings.maxMod do
+        if num == 10 then return end
+        if i != 0 then
+            num = num + 1
+            local funcName = "mod_" .. tostring(i)
+            local prefix = ""
+
+            if i > 0 then
+                prefix = "+"
+            end
+
+            local params = {
+                label           = prefix .. i,
+                click_function  = funcName,
+                function_owner  = self,
+                alignment       = 1,
+                fon_size        = 60,
+                height          = 100,
+                width           = 170,
+                alignment       = 4,
+                position        = {1.32, -1.42 + (num * 0.032), -2.5 + (num * spacing)},
+                rotation        = {13, 180, 0},
+                tooltip         = prefix .. i,
+            }
+
+            local func = function(_, col, _)
+                printWithModifier(i, col)
+            end
+
+            self.setVar(funcName, func)
+            self.createButton(params)
+        end
+    end
+end
+
+function printResult(_, col, _)
+    local val = calcVal()
+    local c = {1, 1, 1}
+    local count = 0
+    for _,_ in pairs(results) do
+        count = count + 1
+    end
+
+    if settings.advantage == 1 and count == 2 then
+        c = {0, 1, 0}
+    end
+
+    if settings.advantage == -1 and count == 2 then
+        c = {1, 0, 0}
+    end
+
+    displayResult(val, count)
+
+    broadcastToAll(Player[col].steam_name..": "..val, c)
+end
+
+function printWithModifier(mod, col)
+    local val = calcVal()
+    local operator = "+"
+    local c = {1, 1, 1}
+    local count = 0
+    for _,_ in pairs(results) do
+        count = count + 1
+    end
+
+    if mod < 0 then
+        operator = ""
+    end
+
+    if settings.advantage == 1 and count == 2 then
+        c = {0, 1, 0}
+    end
+
+    if settings.advantage == -1 and count == 2 then
+        c = {1, 0, 0}
+    end
+
+    local res = val+mod.." ("..val..operator..mod..")"
+
+    displayResult(res, count)
+    broadcastToAll(Player[col].steam_name..": "..res, c)
+end
+
+function displayResult(val, count)
+    local col = {1,1,1}
+
+    if settings.advantage == 1 and count == 2 then
+        col = {0,1,0}
+    end
+
+    if settings.advantage == -1 and count == 2 then
+        col = {1,0,0}
+    end
+
+    prms = {
+        index       = showId,
+        label       = val,
+        font_color  = col,
+    }
+
+    self.editButton(prms)
+end
+
+function toggleEdit()
+    if settings.edit then
+        settings.edit = false
+        deleteInputs()
+    else
+        settings.edit = true
+        showInputs()
+    end
+end
+
+function showInputs()
+
+end
+
+function deleteInputs()
+    local btns = self.getButtons()
+    if btns ~=nil then
+        for _, btn in pairs(btns) do
+            if btn.index > editId then
+                self.removeButton(btn.index)
+            end
+        end
+    end
+    createModButtons()
+    self.clearInputs()
+end
+
+function setAdvantage()
+    settings.advantage = 1
+    self.editButton({
+        index       = advId,
+        width       = 350,
+        height      = 300,
+    })
+    self.editButton({
+        index       = disId,
+        width       = 250,
+        height      = 200,
+    })
+    self.editButton({
+        index       = nId,
+        width       = 250,
+        height      = 200,
+    })
+end
+
+function setDisadvantage()
+    settings.advantage = -1
+    self.editButton({
+        index       = advId,
+        width       = 250,
+        height      = 200,
+    })
+    self.editButton({
+        index       = disId,
+        width       = 350,
+        height      = 300,
+    })
+    self.editButton({
+        index       = nId,
+        width       = 250,
+        height      = 200,
+    })
+end
+
+function setNormal()
+    settings.advantage = 0
+    self.editButton({
+        index       = advId,
+        width       = 250,
+        height      = 200,
+    })
+    self.editButton({
+        index       = disId,
+        width       = 250,
+        height      = 200,
+    })
+    self.editButton({
+        index       = nId,
+        width       = 350,
+        height      = 300,
+    })
+end
+
+function onFixedUpdate()
+    local val = calcVal()
+    local w = 510
+
+    if val > 99 then
+        w = 800
+    end
+
+    local btnParams = {}
+
+    btnParams.index = dispId
+    btnParams.label = val
+    btnParams.width = w
+
+    self.editButton(btnParams)
+end
+
+function calcVal()
+    local val = 0
+    local lowest = 9999
+    local highest = 0
+    local count = 0
+
+
+
+    for k, v in pairs(results) do
+        local obj = getObjectFromGUID(k)
+        if obj == nil then
+            results[k] = nil
+        else
+            if v < lowest then
+                lowest = v
+            end
+            if v > highest then
+                highest = v
+            end
+            val = val + v
+            count = count + 1
+        end
+    end
+
+    if count == 2 then
+        if settings.advantage == 1 then
+            val = highest
+        end
+        if settings.advantage == -1 then
+            val = lowest
+        end
+    end
+
+    return val
+end
+
+function onCollisionStay(info)
+    -- collision_info table:
+    --   collision_object    Object
+    --   contact_points      Table     {Vector, ...}
+    --   relative_velocity   Vector
+    if not info.collision_object.tag == 'Dice' then return end
+
+    local v = info.relative_velocity
+    local r = v[1]*v[1]+v[2]*v[2]+v[3]*v[3]
+
+    if r == 0 then return end
+
+    local ref = info.collision_object.getGUID()
+
+    results[ref] = info.collision_object.getValue()
+end
+
+function onCollisionExit(info)
+    -- collision_info table:
+    --   collision_object    Object
+    --   contact_points      Table     {Vector, ...}
+    --   relative_velocity   Vector
+    if not info.collision_object.tag == 'Dice' then return end
+    local ref = info.collision_object.getGUID()
+
+    results[ref] = nil
+end
